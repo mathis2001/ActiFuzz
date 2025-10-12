@@ -61,3 +61,8 @@ options:
 ```
 
 ## Screenshots
+
+## To Do
+
+- Generate all possible variations
+- Potentially add a screenshot feature to store UI previews
