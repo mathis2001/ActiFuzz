@@ -26,7 +26,6 @@ def parse_cli_args():
     parser.add_argument("-a", "--activity", required=True, help="Full activity name (e.g. com.example/.MainActivity)")
     parser.add_argument("-s", "--serial", help="Device serial number")
 
-    # Note: moved delay to -D / --delay to free -d for --data per requested behavior
     parser.add_argument("-D", "--delay", help="Set the delay between adb commands (seconds)")
     parser.add_argument("-d", "--data", help="Data URI to pass to 'am start' as -d (supports FUZZ)")
 
@@ -49,7 +48,6 @@ def run_adb_activity(activity, extras=None, serial=None, delay=None, data=None):
     if serial:
         base_cmd += ["-s", serial]
 
-    # Build am start command: include -d <data> before -n if provided
     cmd = ["shell", "am", "start"]
     if data:
         cmd += ["-d", data]
