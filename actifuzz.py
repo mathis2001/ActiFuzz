@@ -26,26 +26,34 @@ def parse_cli_args():
     parser.add_argument("-a", "--activity", required=True, help="Full activity name (e.g. com.example/.MainActivity)")
     parser.add_argument("-s", "--serial", help="Device serial number")
 
+    # Note: moved delay to -D / --delay to free -d for --data per requested behavior
+    parser.add_argument("-D", "--delay", help="Set the delay between adb commands (seconds)")
+    parser.add_argument("-d", "--data", help="Data URI to pass to 'am start' as -d (supports FUZZ)")
+
     parser.add_argument("--str", action="append", help="String extra (format key=value)")
     parser.add_argument("--int", action="append", help="Integer extra (format key=value)")
     parser.add_argument("--bool", action="append", help="Boolean extra (format key=true/false)")
     parser.add_argument("--float", action="append", help="Float extra (format key=value)")
     parser.add_argument("--long", action="append", help="Long extra (format key=value)")
-    parser.add_argument("-d", "--delay", help="Set the delay between adb commands (seconds)")
+
     parser.add_argument("-w", "--wordlist", help="Path to a wordlist file to use as FUZZ payloads (one per line). Lines starting with # or blank lines are ignored.")
 
     return parser.parse_args()
 
-def run_adb_activity(activity, extras=None, serial=None, delay=None):
+def run_adb_activity(activity, extras=None, serial=None, delay=None, data=None):
     """
-    Run an ADB activity command with optional extras.
+    Run an ADB activity command with optional extras and optional -d <data>.
     Supports extras of type str (-es), int (-ei), bool (-ez), float (-ef), long (-el).
     """
     base_cmd = ["adb"]
     if serial:
         base_cmd += ["-s", serial]
 
-    cmd = ["shell", "am", "start", "-n", activity]
+    # Build am start command: include -d <data> before -n if provided
+    cmd = ["shell", "am", "start"]
+    if data:
+        cmd += ["-d", data]
+    cmd += ["-n", activity]
 
     if extras:
         for key, value in extras.items():
@@ -122,10 +130,13 @@ def load_wordlist(path):
     try:
         with p.open("r", encoding="utf-8", errors="replace") as fh:
             for line in fh:
-            	# Delete \n\r at the end of each lines
+                # Delete \n\r at the end of each lines
                 line = line.rstrip("\n\r")
                 # ignore blank lines
                 if not line:
+                    continue
+                # ignore comment lines that start with #
+                if line.lstrip().startswith("#"):
                     continue
                 payloads.append(line)
     except Exception as e:
@@ -143,6 +154,7 @@ def fuzz_extras(extras, wordlist=None):
     """
     Function to detect and fuzz any value containing 'FUZZ'.
     If wordlist is provided (list), use it; otherwise use the built-in fuzz_values.
+    Returns a list of extras dicts (one per variation).
     """
     default_fuzz_values = [
         "", " ", "null", "None", "0", "-1", "9999999999",
@@ -209,12 +221,34 @@ def main():
     if args.wordlist:
         wordlist_payloads = load_wordlist(args.wordlist)
 
-    # Fuzz if needed (use wordlist_payloads if provided and non-empty)
-    all_variants = fuzz_extras(extras, wordlist_payloads)
+    # Fuzz extras if needed
+    extras_variants = fuzz_extras(extras, wordlist_payloads)
 
-    for idx, variant in enumerate(all_variants, start=1):
-        print(f"\n=== Fuzzing Intent {idx}/{len(all_variants)} ===")
-        run_adb_activity(args.activity, variant, args.serial, args.delay)
+    # Handle FUZZ inside --data (if present). Make cross-product of extras_variants x data_variants
+    default_fuzz_values = [
+        "", " ", "null", "None", "0", "-1", "9999999999",
+        "!@#$%^&*()", "A" * 100, "A" * 5000, "<script>alert(1)</script>", "🔥", "\n\t",
+    ]
+    data_variants = []
+    if args.data and "FUZZ" in args.data:
+        fuzz_values = wordlist_payloads if (wordlist_payloads and len(wordlist_payloads) > 0) else default_fuzz_values
+        for payload in fuzz_values:
+            data_variants.append(args.data.replace("FUZZ", payload))
+        print(f"{Fore.GREEN}[+]{Fore.RESET} FUZZ detected in --data → {Fore.CYAN}{len(data_variants)}{Fore.RESET} data variations generated")
+    else:
+        # single data value (may be None)
+        data_variants = [args.data]
+
+    # Build combined list of (extras_variant, data_variant) pairs
+    combined = []
+    for ex in extras_variants:
+        for dv in data_variants:
+            combined.append((ex, dv))
+
+    # If no fuzzing occurred at all and neither extras nor data had FUZZ, combined will contain one element.
+    for idx, (variant_extras, variant_data) in enumerate(combined, start=1):
+        print(f"\n=== Fuzzing Intent {idx}/{len(combined)} ===")
+        run_adb_activity(args.activity, variant_extras, args.serial, args.delay, data=variant_data)
 
 
 if __name__ == "__main__":
