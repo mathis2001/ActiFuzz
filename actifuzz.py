@@ -27,7 +27,7 @@ def parse_cli_args():
     parser.add_argument("-s", "--serial", help="Device serial number")
 
     parser.add_argument("-D", "--delay", help="Set the delay between adb commands (seconds)")
-    parser.add_argument("-d", "--data", help="Data URI to pass to 'am start' as -d (supports FUZZ)")
+    parser.add_argument("-d", "--data", help="Data to pass to 'am start' as -d (supports FUZZ)")
 
     parser.add_argument("--str", action="append", help="String extra (format key=value)")
     parser.add_argument("--int", action="append", help="Integer extra (format key=value)")
