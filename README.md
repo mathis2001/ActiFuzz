@@ -19,25 +19,25 @@ $ chmod +x actifuzz.py
 ## Usage
 
 ```
-$ ./actifuzz.py [-h] -a ACTIVITY [-s SERIAL] [--str STR] [--int INT] [--bool BOOL] [--float FLOAT] [--long LONG] [-d DELAY] [-w WORDLIST]
+$ ./actifuzz.py [-h] -a ACTIVITY [-s SERIAL] [-d DATA] [--str STR] [--int INT] [--bool BOOL] [--float FLOAT] [--long LONG] [-D DELAY] [-w WORDLIST]
 ```
 
 ### Send Custom Intent
 
 ```
-$ ./actifuzz.py -a com.example.xyz/.MainActivity --str sextra=string --int iextra=int --bool bextra=bool --float fextra=float --long lextra=long
+$ ./actifuzz.py -a com.example.xyz/.MainActivity  [-d DATA] --str sextra=string --int iextra=int --bool bextra=bool --float fextra=float --long lextra=long
 ```
 
 ### Fuzz Intent (with default wordlist)
 
 ```
-$ ./actifuzz.py -a com.example.xyz/.MainActivity --str sextra=FUZZ --int iextra=FUZZ --bool bextra=FUZZ --float fextra=FUZZ --long lextra=FUZZ [-d delay]
+$ ./actifuzz.py -a com.example.xyz/.MainActivity [-d DATA]--str sextra=FUZZ --int iextra=FUZZ --bool bextra=FUZZ --float fextra=FUZZ --long lextra=FUZZ [-D delay]
 ```
 
 ### Fuzz Intent (with custom wordlist)
 
 ```
-$ ./actifuzz.py -a com.example.xyz/.MainActivity --str sextra=FUZZ --int iextra=FUZZ --bool bextra=FUZZ --float fextra=FUZZ --long lextra=FUZZ -w path/to/wordlist [-d delay]
+$ ./actifuzz.py -a com.example.xyz/.MainActivity [-d DATA] --str sextra=FUZZ --int iextra=FUZZ --bool bextra=FUZZ --float fextra=FUZZ --long lextra=FUZZ -w path/to/wordlist [-d delay]
 ```
 
 ## Options
@@ -54,7 +54,9 @@ options:
   --bool BOOL           Boolean extra (format key=true/false)
   --float FLOAT         Float extra (format key=value)
   --long LONG           Long extra (format key=value)
-  -d DELAY, --delay DELAY
+  -d DATA, --data DATA
+                        Data to pass to 'am start' as -d (supports FUZZ)
+  -D DELAY, --delay DELAY
                         Set the delay between adb commands (seconds)
   -w WORDLIST, --wordlist WORDLIST
                         Path to a wordlist file to use as FUZZ payloads (one per line).
